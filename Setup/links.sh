@@ -66,15 +66,40 @@ file_unlink()
 # LINKERS
 ##
 
+function tmux_link()
+{
+	file_link ".tmux.conf" "tmux/tmux.conf"
+	# Inject tmux-ing functions into shell configuration
+	for CONFIG in ".bashrc" ".zshrc" ; do
+		test_file "${HOME}/${CONFIG}" && \
+		echo "source ${HOME}/sysconfig/tmux/misc.sh" >> "${HOME}/${CONFIG}"
+}
+
 ##
 # UNLINKERS
 ##
 
+function tmux_unlink()
+{
+	file_unlink ".tmux.conf" "tmux/tmux.conf"
+	# Remove tmux-ing functions from shell configuration
+	for CONFIG in ".bashrc" ".zshrc" ; do
+		test_file "${HOME}/${CONFIG}" && \
+		cat "${HOME}/${CONFIG}" | \
+		sed s:"source ${HOME}/sysconfig/tmux/misc.sh"::g
+}
+
 case "$1" in
 	LINK_ALL)
-		true
+		tmux_link
+	;;
+	LINK_TMUX)
+		tmux_link
 	;;
 	UNLINK_ALL)
-		true
+		tmux_unlink
+	;;
+	UNLINK_TMUX)
+		tmux_unlink
 	;;
 esac

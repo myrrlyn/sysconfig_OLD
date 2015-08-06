@@ -2,6 +2,7 @@
 
 #echo "$(pwd)/$0"
 
+# Tilde doesn't need to expand here because it will be done when exec asks
 LINK_SCRIPT="~/sysconfig/Setup/links.sh"
 
 case "$1" in
@@ -13,7 +14,9 @@ case "$1" in
 			exec $LINK_SCRIPT LINK_ALL
 		else
 			case "$2" in
-				# Specific cases go here
+				tmux)
+					exec $LINK_SCRIPT LINK_TMUX
+				;;
 			esac
 		fi
 	;;
@@ -22,7 +25,9 @@ case "$1" in
 			exec $LINK_SCRIPT UNLINK_ALL
 		else
 			case "$2" in
-				# Specific cases go here
+				tmux)
+					exec $LINK_SCRIPT UNLINK_TMUX
+				;;
 			esac
 		fi
 	;;
