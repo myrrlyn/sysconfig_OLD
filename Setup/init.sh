@@ -17,6 +17,9 @@ case "$1" in
 				tmux)
 					exec $LINK_SCRIPT LINK_TMUX
 				;;
+				zsh)
+					exec $LINK_SCRIPT LINK_ZSH
+				;;
 			esac
 		fi
 	;;
@@ -27,6 +30,9 @@ case "$1" in
 			case "$2" in
 				tmux)
 					exec $LINK_SCRIPT UNLINK_TMUX
+				;;
+				zsh)
+					exec $LINK_SCRIPT UNLINK_ZSH
 				;;
 			esac
 		fi

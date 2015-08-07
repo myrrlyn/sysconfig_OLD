@@ -71,8 +71,19 @@ function tmux_link()
 	file_link ".tmux.conf" "tmux/tmux.conf"
 	# Inject tmux-ing functions into shell configuration
 	for CONFIG in ".bashrc" ".zshrc" ; do
-		test_file "${HOME}/${CONFIG}" && \
-		echo "source ${HOME}/sysconfig/tmux/misc.sh" >> "${HOME}/${CONFIG}"
+		# Ensure that the shell configuration files exist (symlinks will work)
+		if test_file "${HOME}/${CONFIG}" ; then
+			# Only inject the source directive if it is not already present
+			grep 'source ${HOME}/syscongig/tmux/misc.sh' < "${HOME}/${CONFIG}" > /dev/null \
+			|| echo 'source ${HOME}/sysconfig/tmux/misc.sh' >> "${HOME}/${CONFIG}"
+		fi
+	done
+}
+
+function zsh_link()
+{
+	file_link ".zshrc" "zsh/zshrc.sh"
+	file_link ".zshenv" "zsh/zshenv.sh"
 }
 
 ##
@@ -84,22 +95,37 @@ function tmux_unlink()
 	file_unlink ".tmux.conf" "tmux/tmux.conf"
 	# Remove tmux-ing functions from shell configuration
 	for CONFIG in ".bashrc" ".zshrc" ; do
-		test_file "${HOME}/${CONFIG}" && \
-		cat "${HOME}/${CONFIG}" | \
-		sed s:"source ${HOME}/sysconfig/tmux/misc.sh"::g
+		if test_file "${HOME}/${CONFIG}" ; then
+			sed s:'source ${HOME}/sysconfig/tmux/misc.sh':'':g < "${HOME}/${CONFIG}"
+		fi
+	done
+}
+
+function zsh_unlink()
+{
+	file_unlink ".zshrc" "zsh/zshrc.sh"
+	file_unlink ".zshenv" "zsh/zshenv.sh"
 }
 
 case "$1" in
 	LINK_ALL)
 		tmux_link
+		zsh_link
 	;;
 	LINK_TMUX)
 		tmux_link
 	;;
+	LINK_ZSH)
+		zsh_link
+	;;
 	UNLINK_ALL)
 		tmux_unlink
+		zsh_unlink
 	;;
 	UNLINK_TMUX)
 		tmux_unlink
+	;;
+	UNLINK_ZSH)
+		zsh_unlink
 	;;
 esac
