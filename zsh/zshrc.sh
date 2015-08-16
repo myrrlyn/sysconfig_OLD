@@ -22,3 +22,9 @@ RPROMPT="%(?.%F{yellow}:)%f.%F{red}:(%f)"
 
 # Load the tmux shell configuration
 source ${HOME}/sysconfig/tmux/misc.sh
+
+function vscode()
+{
+	[ $(uname) = "Darwin" ] && \
+	VSCODE_CWD="$PWD" open -n -b "com.microsoft.VSCode" --args $* ;
+}

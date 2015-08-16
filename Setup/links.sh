@@ -10,56 +10,83 @@
 # -s checks if it has contents
 # If the file is already a symlink, then we do not care about backing up the
 # target. That's on the user.
-test_file()
+function test_file()
 {
 	   [ -f "$1" ] \
 	&& [ -s "$1" ] \
 	&& [ ! -h "$1" ]
 }
-test_link()
+
+function test_link()
 {
 	[ -h "$1" ]
 }
 
 # Echo an error message if a file cannot be deleted
-delete_file()
+function delete_file()
 {
-	$(which rm) -f "$1" || echo "[>>] ERROR: Cannot delete file $1"
+	rm -f "$1" || echo "[>>] ERROR: Cannot delete file $1"
 }
 
 # Back up a dotfile and create a symlink to the appropriate sysconfig file.
 # Call with dotfile first and sysconfig file second. Dotfile assumes it is in ~
 # and sysconfig file assumes it is in ~/sysconfig
-file_link()
+function file_link()
 {
 	# Check if a dotfile already exists and if so, back it up
-	if test_file "$HOME/$1" ; then
-		touch "$HOME/sysconfig/Backup/$1"
-		cat "$HOME/$1" > "$HOME/sysconfig/Backup/$1"
-		delete_file "$HOME/$1"
+	if test_file "${HOME}/$1"
+	then
+		touch "${HOME}/sysconfig/Backup/$(basename $1)"
+		cat "${HOME}/$1" > "${HOME}/sysconfig/Backup/$(basename $1)"
+		delete_file "${HOME}/$1"
 	fi
 	# Check if a symlink already exists, and if so, kill it
-	test_link "$HOME/$1" && delete_file "$HOME/$1"
+	test_link "${HOME}/$1" && delete_file "${HOME}/$1"
 	# Create a symlink from the dotfile to the sysconfig file
 	# ln creates a link to the first argument, from the second argument. FYI.
-	$(which ln) -fs "$HOME/sysconfig/$2" "$HOME/$1"
+	ln -fs "${HOME}/sysconfig/$2" "${HOME}/$1"
 }
+
 # Remove a symlink and restore the dotfile, if present.
 # Same call pattern as file_link
-file_unlink()
+function file_unlink()
 {
 	# Check if a symlink exists and if so, remove it
-	test_link "$HOME/$1" && delete_file "$HOME/$1"
-	touch "$HOME/$1"
+	test_link "${HOME}/$1" && delete_file "${HOME}/$1"
+	touch "${HOME}/$1"
 	# Check if a backup of the dotfile exists and if so, restore it
-	if test_file "$HOME/sysconfig/Backup/$1" ; then
-		cat "$HOME/sysconfig/Backup/$1" > "$HOME/$1"
-		delete_file "$HOME/sysconfig/Backup/$1"
+	if test_file "${HOME}/sysconfig/Backup/$(basename $1)"
+	then
+		cat "${HOME}/sysconfig/Backup/$(basename $1)" > "${HOME}/$1"
+		delete_file "${HOME}/sysconfig/Backup/$(basename $1)"
 	# If a backup does not exist, use the sysconfig file instead
 	# DO NOT DELETE THE SYSCONFIG FILE
 	else
-		cat "$HOME/sysconfig/$2" > "$HOME/$1"
+		cat "${HOME}/sysconfig/$2" > "${HOME}/$1"
 	fi
+}
+
+function config_inject()
+{
+	for CONFIG in ".bashrc" ".zshrc"
+	do
+		if test_file "${HOME}/${CONFIG}"
+		then
+			grep "source \${HOME}/sysconfig/$1" < "${HOME}/${CONFIG}" > /dev/null \
+			|| echo "source \${HOME}/sysconfig/$1" >> "${HOME}/${CONFIG}"
+		fi
+	done
+}
+
+function config_remove()
+{
+	for CONFIG in ".bashrc" ".zshrc"
+	do
+		if test_file "${HOME}/${CONFIG}"
+		then
+			sed s:"source \${HOME}/sysconfig/$1":'':g < "${HOME}/${CONFIG}"
+		fi
+	done
 }
 
 ##
@@ -70,14 +97,7 @@ function tmux_link()
 {
 	file_link ".tmux.conf" "tmux/tmux.conf"
 	# Inject tmux-ing functions into shell configuration
-	for CONFIG in ".bashrc" ".zshrc" ; do
-		# Ensure that the shell configuration files exist (symlinks will work)
-		if test_file "${HOME}/${CONFIG}" ; then
-			# Only inject the source directive if it is not already present
-			grep 'source ${HOME}/syscongig/tmux/misc.sh' < "${HOME}/${CONFIG}" > /dev/null \
-			|| echo 'source ${HOME}/sysconfig/tmux/misc.sh' >> "${HOME}/${CONFIG}"
-		fi
-	done
+	config_inject "tmux/misc.sh"
 }
 
 function zsh_link()
@@ -94,11 +114,7 @@ function tmux_unlink()
 {
 	file_unlink ".tmux.conf" "tmux/tmux.conf"
 	# Remove tmux-ing functions from shell configuration
-	for CONFIG in ".bashrc" ".zshrc" ; do
-		if test_file "${HOME}/${CONFIG}" ; then
-			sed s:'source ${HOME}/sysconfig/tmux/misc.sh':'':g < "${HOME}/${CONFIG}"
-		fi
-	done
+	config_remove "tmux/misc.sh"
 }
 
 function zsh_unlink()
