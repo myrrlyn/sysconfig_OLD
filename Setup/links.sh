@@ -33,17 +33,19 @@ function delete_file()
 # and sysconfig file assumes it is in ~/sysconfig
 function file_link()
 {
-	# Check if a dotfile already exists and if so, back it up
+	touch "${HOME}/sysconfig/$2"
+# Check if a dotfile already exists and if so, back it up. If the dotfile is
+# a symlink, remove the link.
 	if test_file "${HOME}/$1"
 	then
 		touch "${HOME}/sysconfig/Backup/$(basename $1)"
 		cat "${HOME}/$1" > "${HOME}/sysconfig/Backup/$(basename $1)"
 		delete_file "${HOME}/$1"
+	elif test_link "${HOME}/$1"
+		delete_file "${HOME}/$1"
 	fi
-	# Check if a symlink already exists, and if so, kill it
-	test_link "${HOME}/$1" && delete_file "${HOME}/$1"
-	# Create a symlink from the dotfile to the sysconfig file
-	# ln creates a link to the first argument, from the second argument. FYI.
+# Create a symlink from the dotfile to the sysconfig file
+# ln creates a link to the first argument, from the second argument. FYI.
 	ln -fs "${HOME}/sysconfig/$2" "${HOME}/$1"
 }
 
@@ -51,16 +53,18 @@ function file_link()
 # Same call pattern as file_link
 function file_unlink()
 {
-	# Check if a symlink exists and if so, remove it
+# Check if a symlink exists and if so, remove it
 	test_link "${HOME}/$1" && delete_file "${HOME}/$1"
 	touch "${HOME}/$1"
-	# Check if a backup of the dotfile exists and if so, restore it
+# If the link was removed and replaced with an actual file, well...
+# RIP that file. The backup's coming in, choo choo.
+# Check if a backup of the dotfile exists and if so, restore it
 	if test_file "${HOME}/sysconfig/Backup/$(basename $1)"
 	then
 		cat "${HOME}/sysconfig/Backup/$(basename $1)" > "${HOME}/$1"
 		delete_file "${HOME}/sysconfig/Backup/$(basename $1)"
-	# If a backup does not exist, use the sysconfig file instead
-	# DO NOT DELETE THE SYSCONFIG FILE
+# If a backup does not exist, use the sysconfig file instead
+# DO NOT DELETE THE SYSCONFIG FILE
 	else
 		cat "${HOME}/sysconfig/$2" > "${HOME}/$1"
 	fi
@@ -68,12 +72,19 @@ function file_unlink()
 
 function config_inject()
 {
+# I don't use any other shells
 	for CONFIG in ".bashrc" ".zshrc"
 	do
+# Look for if the config file exists
 		if test_file "${HOME}/${CONFIG}"
 		then
-			grep "source \${HOME}/sysconfig/$1" < "${HOME}/${CONFIG}" > /dev/null \
-			|| echo "source \${HOME}/sysconfig/$1" >> "${HOME}/${CONFIG}"
+# Look for the target line to already exist
+# If it isn't there, grep reports a failure, so we add the line.
+			grep "source \${HOME}/sysconfig/$1" \
+			< "${HOME}/${CONFIG}" \
+			> /dev/null \
+			|| echo "source \${HOME}/sysconfig/$1" \
+			>> "${HOME}/${CONFIG}"
 		fi
 	done
 }
@@ -84,7 +95,14 @@ function config_remove()
 	do
 		if test_file "${HOME}/${CONFIG}"
 		then
-			sed s:"source \${HOME}/sysconfig/$1":'':g < "${HOME}/${CONFIG}"
+# Search for the appropriate line, and if found, kill it.
+# Note: Reading from and writing to the same file results in the file being
+# emptied. Write to a tmpfile, flush to filesystem, and then finalize.
+			sed s:"source \${HOME}/sysconfig/$1":'':g \
+			< "${HOME}/${CONFIG}" \
+			> "${HOME}/${CONFIG}.tmp"
+			sync
+			mv "${HOME}/${CONFIG}.tmp" "${HOME}/${CONFIG}"
 		fi
 	done
 }
@@ -96,7 +114,7 @@ function config_remove()
 function tmux_link()
 {
 	file_link ".tmux.conf" "tmux/tmux.conf"
-	# Inject tmux-ing functions into shell configuration
+# Inject tmux-ing functions into shell configuration
 	config_inject "tmux/misc.sh"
 }
 
@@ -113,7 +131,7 @@ function zsh_link()
 function tmux_unlink()
 {
 	file_unlink ".tmux.conf" "tmux/tmux.conf"
-	# Remove tmux-ing functions from shell configuration
+# Remove tmux-ing functions from shell configuration
 	config_remove "tmux/misc.sh"
 }
 
@@ -143,5 +161,12 @@ case "$1" in
 	;;
 	UNLINK_ZSH)
 		zsh_unlink
+	;;
+# God forbid this should ever be printed. If it is, something's fucky.
+	*)
+		cat <<-EOS
+This script must be given an argument $1 in order to function properly. It
+should only be called from within the init script, and not by itself.
+		EOS
 	;;
 esac
