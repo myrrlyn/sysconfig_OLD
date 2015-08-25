@@ -57,6 +57,9 @@ case "$1" in
 			exec "${LINK_SCRIPT}" LINK_ALL
 		else
 			case "$2" in
+				ssh)
+					exec "${LINK_SCRIPT}" LINK_SSH
+				;;
 				tmux)
 					exec "${LINK_SCRIPT}" LINK_TMUX
 				;;
@@ -72,6 +75,9 @@ case "$1" in
 			exec "${LINK_SCRIPT}" UNLINK_ALL
 		else
 			case "$2" in
+				ssh)
+					exec "${LINK_SCRIPT}" UNLINK_SSH
+				;;
 				tmux)
 					exec "${LINK_SCRIPT}" UNLINK_TMUX
 				;;

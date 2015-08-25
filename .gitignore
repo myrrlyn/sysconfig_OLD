@@ -1,3 +1,8 @@
 # Ignore backups of pre-existing config files
 Backup/*
 !Backup/.gitkeep
+
+# IGNORE PRIVATE SSH KEYS
+ssh/keys/*.prv
+# Ignore SSH auth-key index
+ssh/keys/authorized_keys.conf

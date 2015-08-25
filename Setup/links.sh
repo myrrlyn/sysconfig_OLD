@@ -111,6 +111,51 @@ function config_remove()
 # LINKERS
 ##
 
+function ssh_link()
+{
+	file_link ".ssh/authorized_keys" "ssh/authorized_keys.conf"
+	file_link ".ssh/config" "ssh/configc.conf"
+	file_link ".ssh/environment" "ssh/environment.conf"
+	config_inject "ssh/misc.sh"
+	for KEY in "ecdsa" "ed25519" "rsa"
+	do
+		if test_file "${HOME}/.ssh/id_${KEY}" \
+		&& test_file "${HOME}/.ssh/id_${KEY}.pub"
+		then
+			cat <<-EOS
+[**] NOTE: Pre-existing ${KEY} keys found!
+[**] Copying to ~/sysconfig/Backup and ~/sysconfig/ssh/keys
+[**] Linking from ~/.ssh/id_KEYTYPE to ~/sysconfig/ssh/keys/USER-HOST-${KEY}
+			EOS
+			touch "${HOME}/sysconfig/Backup/id_${KEY}"
+			touch "${HOME}/sysconfig/Backup/id_${KEY}.pub"
+cp "${HOME}/.ssh/id_${KEY}" \
+   "${HOME}/sysconfig/Backup/id_${KEY}"
+cp "${HOME}/.ssh/id_${KEY}" \
+   "${HOME}/sysconfig/ssh/keys/$(whoami)-$(cat /etc/hostname)-${KEY}.prv"
+cp "${HOME}/.ssh/id_${KEY}.pub" \
+   "${HOME}/sysconfig/Backup/id_${KEY}.pub"
+cp "${HOME}/.ssh/id_${KEY}.pub" \
+   "${HOME}/sysconfig/ssh/keys/$(whoami)-$(cat /etc/hostname)-${KEY}.pub"
+delete_file "${HOME}/.ssh/id_${KEY}"
+delete_file "${HOME}/.ssh/id_${KEY}.pub"
+ln -fs \
+   "${HOME}/sysconfig/ssh/keys/$(whoami)-$(cat /etc/hostname)-${KEY}.prv" \
+   "${HOME}/.ssh/id_${KEY}"
+ln -fs \
+   "${HOME}/sysconfig/ssh/keys/$(whoami)-$(cat /etc/hostname)-${KEY}.pub" \
+   "${HOME}/.ssh/id_${KEY}.pub"
+			cat <<-EOS
+[**] Key relocation complete.
+			EOS
+		fi
+	done
+	cat <<-EOS
+Consider adding elements from sysconfig/ssh/configd.conf to your system's
+/etc/ssh/sshd_config file. This script cannot do so for you.
+	EOS
+}
+
 function tmux_link()
 {
 	file_link ".tmux.conf" "tmux/tmux.conf"
@@ -128,6 +173,27 @@ function zsh_link()
 # UNLINKERS
 ##
 
+function ssh_unlink()
+{
+	file_unlink ".ssh/authorized_keys" "ssh/authorized_keys.txt"
+	file_unlink ".ssh/config" "ssh/configc.conf"
+	file_unlink ".ssh/environment" "ssh/environment.conf"
+	config_remove "ssh/misc.sh"
+	for KEY in "dsa" "ecdsa" "ed25519" "rsa"
+	do
+		test_link "${HOME}/.ssh/id_${KEY}" && \
+		delete_file "${HOME}/.ssh/id_${KEY}"
+		test_link "${HOME}/.ssh/id_${KEY}.pub" && \
+		delete_file "${HOME}/.ssh/id_${KEY}.pub"
+		if test_file "${HOME}/Backup/id_${KEY}" \
+		&& test_file "${HOME}/Backup/id_${KEY}.pub"
+		then
+			cp "${HOME}/Backup/id_${KEY}" "${HOME}/.ssh/id_${KEY}"
+			cp "${HOME}/Backup/id_${KEY}.pub" "${HOME}/.ssh/id_${KEY}.pub"
+		fi
+	done
+}
+
 function tmux_unlink()
 {
 	file_unlink ".tmux.conf" "tmux/tmux.conf"
@@ -143,8 +209,12 @@ function zsh_unlink()
 
 case "$1" in
 	LINK_ALL)
+		ssh_link
 		tmux_link
 		zsh_link
+	;;
+	LINK_SSH)
+		ssh_link
 	;;
 	LINK_TMUX)
 		tmux_link
@@ -153,8 +223,12 @@ case "$1" in
 		zsh_link
 	;;
 	UNLINK_ALL)
+		ssh_link
 		tmux_unlink
 		zsh_unlink
+	;;
+	UNLINK_SSH)
+		ssh_unlink
 	;;
 	UNLINK_TMUX)
 		tmux_unlink
