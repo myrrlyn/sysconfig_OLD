@@ -6,7 +6,7 @@ function ssh_add_key()
 # If grep finds the given key, nothing happens. If grep does not, it emits a
 # failed exit, and the given key is appended to the key index.
 	grep "$(cat "keys/$1")" \
-	<  "${HOME}/sysconfig/keys/authorized_keys.pub" \
+	<  "${HOME}/sysconfig/keys/authorized_keys.conf" \
 	>  /dev/null \
 	|| cat "keys/$1" \
 	>> "keys/authorized_keys.conf"
