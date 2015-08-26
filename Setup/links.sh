@@ -42,6 +42,7 @@ function file_link()
 		cat "${HOME}/$1" > "${HOME}/sysconfig/Backup/$(basename $1)"
 		delete_file "${HOME}/$1"
 	elif test_link "${HOME}/$1"
+	then
 		delete_file "${HOME}/$1"
 	fi
 # Create a symlink from the dotfile to the sysconfig file
