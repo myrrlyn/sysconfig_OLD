@@ -6,7 +6,7 @@ function ssh_add_key()
 # If grep finds the given key, nothing happens. If grep does not, it emits a
 # failed exit, and the given key is appended to the key index.
 	grep "$(cat "keys/$1")" \
-	<  "${HOME}/sysconfig/keys/authorized_keys.conf" \
+	<  "${HOME}/sysconfig/authorized_keys.conf" \
 	>  /dev/null \
 	|| cat "keys/$1" \
 	>> "keys/authorized_keys.conf"
@@ -19,11 +19,11 @@ function ssh_del_key()
 # happens. Overuse of these functions will eventually leave many empty lines in
 # the key index. Manual curation is required to fix that.
 	sed s:"$(cat "keys/$1")":'':g \
-	< "${HOME}/sysconfig/keys/authorized_keys.conf" \
-	> "${HOME}/sysconfig/keys/authorized_keys.conf.tmp"
+	< "${HOME}/sysconfig/authorized_keys.conf" \
+	> "${HOME}/sysconfig/authorized_keys.conf.tmp"
 	sync
-	mv "${HOME}/sysconfig/keys/authorized_keys.conf.tmp" \
-	   "${HOME}/sysconfig/keys/authorized_keys.conf"
+	mv "${HOME}/sysconfig/authorized_keys.conf.tmp" \
+	   "${HOME}/sysconfig/authorized_keys.conf"
 }
 
 # Get an array of key names matching parameters
